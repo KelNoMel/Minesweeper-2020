@@ -35,6 +35,7 @@ void initialise_field(int minefield[SIZE][SIZE]);
 void print_debug_minefield(int minefield[SIZE][SIZE]);
 void print_gameplay_minefield(int minefield[SIZE][SIZE], int doomswitch);
 int scan_adjacent(int minefield[SIZE][SIZE], int size, int grid1, int grid2);
+void protect_reveal(int minefield[SIZE][SIZE]);
 
 // Place your function prototyes here.
 
@@ -75,7 +76,7 @@ int main(void) {
     int to_clear = SIZE*SIZE - mines_num;
 
     // Game variables external from commands
-    int doomswitch = 0, count = 0, cleared = 0, viewmode = 0;
+    int doomswitch = 0, count = 0, cleared = 0, viewmode = 0, safety_net = 0;
     
     // Commands for during the game
     int command_type = 0, grid1 = 0, grid2 = 0;
@@ -156,13 +157,19 @@ int main(void) {
             hold_column = grid2;
 
             // Coordinates are a mine = game over
-            if (minefield[grid1][grid2] == 2) {
+            if (minefield[grid1][grid2] == 2 && safety_net > 0) {
                 printf("Game over\n");
                 doomswitch--;
             }
+            // Protect first reveal
+            else if (minefield[grid1][grid2] == 2 && safety_net == 0) {
+                while (minefield[grid1][grid2] == 2) {
+                    protect_reveal(minefield);
+                }
+            }
 
             // Coordinates are not a mine = reveal
-            else {
+            if (minefield[grid1][grid2] == 1) {
                 // Scan for mines nearby
                 mines_in = scan_adjacent(minefield, size, grid1, grid2);
 
@@ -197,12 +204,12 @@ int main(void) {
                         while (grid2 > 0 && grid2 > hold_column - size / 2) {
                             grid2--;
                         }
-
                         grid1++;
                     }
                 }
                 mines_in = 0;
             }
+            safety_net++;
         }
 
         // Switch between gameplay/debug mode (5) (6)
@@ -214,6 +221,112 @@ int main(void) {
         if (command_type == 6 && viewmode == 1) {
             viewmode--;
             printf("Debug mode activated\n");
+        }
+        
+        // Reveal Radial (7)
+        if (command_type == 7) {
+            scanf("%d %d", &grid1, &grid2);
+            hold_row = grid1;
+            hold_column = grid2;
+            
+            // Coordinates are a mine = game over
+            if (minefield[grid1][grid2] == 2 && safety_net > 0) {
+                printf("Game over\n");
+                doomswitch--;
+            }
+            
+            // Protect first reveal
+            else if (minefield[grid1][grid2] == 2 && safety_net == 0) {
+                while (minefield[grid1][grid2] == 2) {
+                    protect_reveal(minefield);
+                }
+            }
+                
+            // Coordinates are not a mine = revealing directions
+            if (minefield[grid1][grid2] == 1) {
+                size = 3;
+                // Reveal Up
+                while (grid1 >= 0 && mines_in == 0) {
+                    mines_in = scan_adjacent(minefield, size, grid1, grid2);
+                    minefield[grid1][grid2] = VISIBLE_SAFE;
+                    cleared++;
+                    grid1--;
+                }
+                grid1 = hold_row;
+                mines_in = 0;
+                // Reveal Down
+                while (grid1 < SIZE && mines_in == 0) {
+                    mines_in = scan_adjacent(minefield, size, grid1, grid2);
+                    minefield[grid1][grid2] = VISIBLE_SAFE;
+                    cleared++;
+                    grid1++;
+                }
+                grid1 = hold_row;
+                mines_in = 0;
+                // Reveal Left
+                while (grid2 >= 0 && mines_in == 0) {
+                    mines_in = scan_adjacent(minefield, size, grid1, grid2);
+                    minefield[grid1][grid2] = VISIBLE_SAFE;
+                    cleared++;
+                    grid2--;
+                }
+                grid2 = hold_column;
+                mines_in = 0;
+                // Reveal Right
+                while (grid2 < SIZE && mines_in == 0) {
+                    mines_in = scan_adjacent(minefield, size, grid1, grid2);
+                    minefield[grid1][grid2] = VISIBLE_SAFE;
+                    cleared++;
+                    grid2++;
+                }
+                grid2 = hold_column;
+                mines_in = 0;
+                // Reveal Up Right
+                while (grid1 >= 0 && grid2 < SIZE && mines_in == 0) {
+                    mines_in = scan_adjacent(minefield, size, grid1, grid2);
+                    minefield[grid1][grid2] = VISIBLE_SAFE;
+                    cleared++;
+                    grid1--;
+                    grid2++;
+                }
+                grid1 = hold_row;
+                grid2 = hold_column;
+                mines_in = 0;
+                // Reveal Down Right
+                while (grid1 < SIZE && grid2 < SIZE && mines_in == 0) {
+                    mines_in = scan_adjacent(minefield, size, grid1, grid2);
+                    minefield[grid1][grid2] = VISIBLE_SAFE;
+                    cleared++;
+                    grid1++;
+                    grid2++;
+                }
+                grid1 = hold_row;
+                grid2 = hold_column;
+                mines_in = 0;
+                // Reveal Up Left
+                while (grid1 >= 0 && grid2 >= 0 && mines_in == 0) {
+                    mines_in = scan_adjacent(minefield, size, grid1, grid2);
+                    minefield[grid1][grid2] = VISIBLE_SAFE;
+                    cleared++;
+                    grid1--;
+                    grid2--;
+                }
+                grid1 = hold_row;
+                grid2 = hold_column;
+                mines_in = 0;
+                // Reveal Down Left
+                while (grid1 < SIZE && grid2 >= 0 && mines_in == 0) {
+                    mines_in = scan_adjacent(minefield, size, grid1, grid2);
+                    minefield[grid1][grid2] = VISIBLE_SAFE;
+                    cleared++;
+                    grid1++;
+                    grid2--;
+                }
+                grid1 = hold_row;
+                grid2 = hold_column;
+                mines_in = 0;
+            }
+            safety_net++;
         }
 
         // Win condition fulfilled
@@ -275,6 +388,26 @@ int scan_adjacent(int minefield[SIZE][SIZE], int size, int grid1, int grid2) {
         grid1++;
     }
     return mines_in;
+}
+
+// Set the minefield so that first reveal is safe
+void protect_reveal(int minefield[SIZE][SIZE]) {
+    int i = 0;
+    int j = 0;
+    while (j < SIZE) {
+        minefield[i][j] = minefield[i + SIZE - 1][j];
+        j++;
+    }
+    i++;
+    j = 0;
+    
+    while (i < SIZE) {
+        while (j < SIZE) {
+            minefield[i][j] = minefield[i - 1][j];
+            j++;
+        }
+        i++;
+    }
 }
 
 // Set the entire minefield to HIDDEN_SAFE.
