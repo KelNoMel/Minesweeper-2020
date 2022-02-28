@@ -1,5 +1,3 @@
-Don't push changes to this repository directly.
+My first ever significant coding project!
 
-Don't change the repository via the web interface
-
-Submit your work using give, and it will be automatically pushed to this repository.
+Here I sought to replicate minesweeper in the console terminal. This was written as my first assignment for COMP1511
